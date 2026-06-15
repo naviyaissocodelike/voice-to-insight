@@ -217,11 +217,39 @@ The stored data is only valuable if it's queryable. Phase 2 will add:
 
 ---
 
-## 8. Open Questions
+## 8. Hosting & Access
 
-- [ ] What does "DA" stand for in `relationship_to_da`? (Used to calibrate AI prompts)
-- [ ] Confirm / correct the enum values above before they go into the schema
-- [ ] Should deals be created from voice notes, or managed separately?
-- [ ] Is there an existing Supabase project to connect to, or starting fresh?
-- [ ] Which team members need access? (Drives Supabase Auth setup)
-- [ ] Should the Google Sheet be the source of truth for stakeholders, or just a read-only mirror?
+**Primary UI:** Mobile-optimized web app on Vercel. Works on any device with no install.  
+**Team entry point:** Link pinned in District Angels Slack workspace.  
+**Phase 2:** Slack `/crm` slash command as a second input channel for quick text dumps.
+
+**Why web app over Slack-native voice:**
+- Slack voice messages aren't designed for transcript piping
+- The web app provides a review/edit UI before writing to the CRM
+- Mobile PWA behavior gives app-like feel without App Store friction
+
+**Ideal capture window:** Within 10 minutes of any meeting, event, or call ending.
+
+---
+
+## 9. Decisions Log
+
+| Decision | Answer | Date |
+|---|---|---|
+| What does "DA" stand for? | District Angels | 2026-06-15 |
+| Supabase: existing or new? | Existing project (schema from ERD is live) | 2026-06-15 |
+| Slack bot vs web app first? | Web app first; Slack bot in Phase 2 | 2026-06-15 |
+| Deals from voice notes? | Secondary — extract if mentioned, but not primary focus | 2026-06-15 |
+| Auth method? | Google Sign-In via Supabase Auth | 2026-06-15 |
+| Multi-person notes? | Yes — AI splits a single note into multiple contact records | 2026-06-15 |
+| Existing record conflict? | Merge/enrich — fill empty fields only, never overwrite existing data | 2026-06-15 |
+
+---
+
+## 10. Open Questions
+
+- [ ] Confirm / correct the enum values in Section 5 — are these the actual values in your Supabase schema, or do we need to run `SELECT unnest(enum_range(NULL::your_enum))` to export them?
+- [ ] Which team members need access? (Google accounts for Supabase Auth allowlist)
+- [ ] Google Sheets: still needed as a stakeholder mirror, or is Supabase enough?
+- [ ] `engagement_level` is marked COMP (computed) — what's the formula? (e.g. based on interaction frequency + recency)
+- [ ] `last_interaction` is also COMP — driven by the `interactions` table?
