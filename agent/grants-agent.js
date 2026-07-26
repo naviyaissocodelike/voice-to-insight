@@ -1,6 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { searchWeb } from './search.js';
-import { loadOpportunities, saveOpportunity, normalizeUrl } from './storage.js';
+import {
+  loadOpportunities,
+  saveOpportunity,
+  normalizeUrl,
+  loadRunHistory,
+  recordRun
+} from './storage.js';
 
 const TOOLS = [
   {
@@ -167,23 +173,46 @@ export async function runGrantsAgent({ onProgress, onOpportunity, onComplete, sh
   );
 
   const stats = { searches: 0, saved: 0, skipped: 0, errors: 0, inputTokens: 0, outputTokens: 0 };
+  const usedQueries = [];
   const log = msg => onProgress?.(msg);
 
   log(`Starting search. ${existingUrls.size} opportunities already tracked.`);
 
-  const messages = [
-    {
-      role: 'user',
-      content: `Begin your comprehensive search now.
+  // Incremental context: known opportunities + queries from previous runs, so
+  // each run explores new ground instead of rediscovering the same programs.
+  const knownList = existing
+    .slice(0, 100)
+    .map(o => `- ${o.title} (${o.organization})`)
+    .join('\n');
+  const pastQueries = loadRunHistory()
+    .flatMap(r => r.queries || [])
+    .slice(-100);
+  const pastQueryList = pastQueries.map(q => `- ${q}`).join('\n');
 
-${existingUrls.size > 0
-  ? `We already have ${existingUrls.size} opportunities tracked. Focus on finding NEW opportunities not yet in our database — duplicates are detected automatically, so cast a wide net.`
-  : 'This is a fresh database — build it from scratch with the best opportunities you can find.'
-}
+  const kickoff =
+    existingUrls.size === 0
+      ? `Begin your comprehensive search now.
+
+This is a fresh database — build it from scratch with the best opportunities you can find.
 
 Run at least 20 searches across all categories. Save every quality opportunity you find. Go!`
-    }
-  ];
+      : `Begin your incremental search now.
+
+We already track ${existingUrls.size} opportunities. Your goal is NEW opportunities only — duplicates are detected automatically, but don't waste searches rediscovering what we have.
+
+## Already tracked (do NOT re-save these)
+${knownList}
+
+${pastQueries.length > 0 ? `## Queries used in previous runs (do NOT repeat these — find fresh angles)
+${pastQueryList}
+
+` : ''}## Incremental strategy
+- Prioritize RECENTLY ANNOUNCED programs: use terms like "announced", "just launched", "new", "opens", and current month/year in queries
+- Try organizations, keywords, and category angles that previous queries missed
+- Check for new cohorts/cycles of known recurring programs (a new year's cycle counts as new if the URL differs)
+- Run at least 20 searches. Save every quality NEW opportunity you find. Go!`;
+
+  const messages = [{ role: 'user', content: kickoff }];
 
   let iterations = 0;
   const MAX_ITERATIONS = 50;
@@ -237,6 +266,7 @@ Run at least 20 searches across all categories. Save every quality opportunity y
       try {
         if (block.name === 'search_web') {
           stats.searches++;
+          usedQueries.push(block.input.query);
           log(`Searching: "${block.input.query}"`);
           const results = await searchWeb(block.input.query);
           resultContent = JSON.stringify({ count: results.length, results });
@@ -284,6 +314,10 @@ Run at least 20 searches across all categories. Save every quality opportunity y
 
   if (iterations >= MAX_ITERATIONS) {
     log(`Reached the ${MAX_ITERATIONS}-iteration cap; some categories may not be fully covered.`);
+  }
+
+  if (stats.searches > 0) {
+    recordRun({ saved: stats.saved, searches: stats.searches, queries: usedQueries });
   }
 
   const finalStats = {

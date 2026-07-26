@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = path.join(__dirname, '../data/opportunities.json');
+const HISTORY_FILE = path.join(__dirname, '../data/run-history.json');
 
 const TRACKING_PARAMS = new Set([
   'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
@@ -92,6 +93,30 @@ export function saveOpportunity(opp) {
 
   fs.writeFileSync(DATA_FILE, JSON.stringify(opps, null, 2));
   return opps;
+}
+
+// Run history powers incremental searching: each run records the queries it
+// used so the next run can avoid repeating them and hunt for fresh angles.
+export function loadRunHistory() {
+  if (!fs.existsSync(HISTORY_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+export function recordRun({ saved, searches, queries }) {
+  ensureDir();
+  const history = loadRunHistory();
+  history.push({
+    at: new Date().toISOString(),
+    saved,
+    searches,
+    queries: queries.slice(0, 60)
+  });
+  // Keep the last 30 runs — enough query memory without unbounded growth
+  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history.slice(-30), null, 2));
 }
 
 export function getStats() {

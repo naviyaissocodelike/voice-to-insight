@@ -58,8 +58,9 @@ BRAVE_API_KEY=BSA...           # free at api.search.brave.com/app/keys (2000 que
 
 - **Web UI**: `npm start` → open `http://localhost:3000/grants.html` → click **Run Agent**. Progress streams live; cards appear as opportunities are found. Filter by status/category, search, and sort by deadline.
 - **CLI**: `npm run grants` (add `--quiet` to only print saved opportunities).
+- **Automated (GitHub Actions)**: `.github/workflows/grants-agent.yml` runs the agent daily at 13:00 UTC and commits new finds back to the repo. Requires `ANTHROPIC_API_KEY` and `BRAVE_API_KEY` as repository Actions secrets (Settings → Secrets and variables → Actions). Trigger it manually anytime from the Actions tab (**Run workflow**). Each run's new opportunities appear as a table in the job summary.
 
-Data lives in `data/opportunities.json` (gitignored). Each run dedupes against what's already tracked, so re-running only adds new finds.
+Data lives in `data/opportunities.json` (committed, so state persists across CI runs). Runs are **incremental**: the agent is shown what's already tracked and which search queries previous runs used (`data/run-history.json`), so each run hunts for newly announced programs and fresh angles instead of rediscovering the same ones. Duplicates are also caught by canonicalized-URL dedup as a backstop.
 
 ## Stack
 
