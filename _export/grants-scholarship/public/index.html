@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Opportunity Radar</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0d0d0f;
+      --surface:      #16161a;
+      --surface2:     #1e1e25;
+      --border:       #2a2a32;
+      --accent:       #7c6af7;
+      --accent-dim:   rgba(124, 106, 247, 0.18);
+      --accent-glow:  rgba(124, 106, 247, 0.35);
+      --text:         #e8e8f0;
+      --muted:        #6b6b80;
+      --danger:       #f75a5a;
+      --warn:         #f7c05a;
+      --success:      #5af7a0;
+      --cat-entrepreneur: #a78bfa;
+      --cat-angel:        #f472b6;
+      --cat-ai-good:      #34d399;
+      --cat-abroad:       #60a5fa;
+      --cat-competition:  #fb923c;
+      --cat-ai-program:   #a3e635;
+      --cat-grant:        #f9a8d4;
+      --cat-fellowship:   #7dd3fc;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-title {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 8px 4px;
+      margin-top: 8px;
+    }
+
+    .sidebar-title:first-child { margin-top: 0; }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .filter-btn:hover { background: var(--surface2); color: var(--text); }
+    .filter-btn.active { background: var(--accent-dim); color: var(--text); }
+
+    .filter-btn .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .filter-btn .count {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .main { flex: 1; min-width: 0; padding: 32px 24px; max-width: 1100px; }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .page-title h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .page-title p { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+    /* ── Stats ── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      min-width: 120px;
+    }
+
+    .stat-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--muted); }
+
+    .select-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .select-box:focus { border-color: var(--accent); }
+
+    .run-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+
+    .run-btn:hover { box-shadow: 0 0 0 4px var(--accent-dim); }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .run-btn .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .run-btn.running .spinner { display: block; }
+    .run-btn.running .run-icon { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Progress log ── */
+    .progress-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .progress-panel.visible { display: block; }
+
+    .progress-panel p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: "SF Mono", "Fira Code", monospace;
+      line-height: 1.6;
+    }
+
+    .progress-panel p.highlight { color: var(--success); }
+    .progress-panel p.error { color: var(--danger); }
+
+    /* ── Cards ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .opp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .opp-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .cat-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .status-dot.open    { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-dot.upcoming { background: var(--warn); }
+    .status-dot.rolling  { background: #7dd3fc; }
+    .status-dot.unknown  { background: var(--border); }
+    .status-dot.closed   { background: var(--danger); opacity: 0.6; }
+
+    .opp-card.closed { opacity: 0.55; }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--text);
+    }
+
+    .card-org {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .meta-chip {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .meta-chip.amount { color: var(--success); border-color: rgba(90, 247, 160, 0.3); background: rgba(90, 247, 160, 0.07); }
+    .meta-chip.deadline-urgent { color: var(--danger); border-color: rgba(247, 90, 90, 0.4); background: rgba(247, 90, 90, 0.07); }
+    .meta-chip.deadline-soon   { color: var(--warn);   border-color: rgba(247, 192, 90, 0.4); background: rgba(247, 192, 90, 0.07); }
+    .meta-chip.deadline-ok     { color: var(--success); border-color: rgba(90, 247, 160, 0.3); background: rgba(90, 247, 160, 0.07); }
+
+    .card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .tag {
+      font-size: 0.67rem;
+      padding: 2px 7px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 4px;
+    }
+
+    .apply-btn {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      width: fit-content;
+    }
+
+    .apply-btn:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      grid-column: 1 / -1;
+    }
+
+    .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h2 { font-size: 1.2rem; margin-bottom: 8px; }
+    .empty-state p { color: var(--muted); font-size: 0.9rem; max-width: 360px; margin: 0 auto 20px; line-height: 1.5; }
+
+    /* ── Last updated ── */
+    .last-updated { font-size: 0.75rem; color: var(--muted); margin-bottom: 16px; }
+
+    /* ── Nav link ── */
+    .nav-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: color 0.15s;
+      margin-bottom: 4px;
+    }
+
+    .nav-back:hover { color: var(--text); }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; padding: 12px; border-right: none; border-bottom: 1px solid var(--border); }
+      .sidebar-title { display: none; }
+      .main { padding: 16px; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+
+    <span class="sidebar-title">Status</span>
+    <button class="filter-btn active" data-filter="status" data-value="all">
+      All <span class="count" id="count-all">0</span>
+    </button>
+    <button class="filter-btn" data-filter="status" data-value="open">
+      <span class="dot" style="background:var(--success)"></span> Open
+      <span class="count" id="count-open">0</span>
+    </button>
+    <button class="filter-btn" data-filter="status" data-value="rolling">
+      <span class="dot" style="background:#7dd3fc"></span> Rolling
+      <span class="count" id="count-rolling">0</span>
+    </button>
+    <button class="filter-btn" data-filter="status" data-value="upcoming">
+      <span class="dot" style="background:var(--warn)"></span> Upcoming
+      <span class="count" id="count-upcoming">0</span>
+    </button>
+
+    <span class="sidebar-title">Category</span>
+    <button class="filter-btn" data-filter="category" data-value="entrepreneurship">
+      <span class="dot" style="background:var(--cat-entrepreneur)"></span> Entrepreneurship
+      <span class="count" id="count-cat-entrepreneurship">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="ai-for-good">
+      <span class="dot" style="background:var(--cat-ai-good)"></span> AI for Good
+      <span class="count" id="count-cat-ai-for-good">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="ai-program">
+      <span class="dot" style="background:var(--cat-ai-program)"></span> AI Programs
+      <span class="count" id="count-cat-ai-program">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="competition">
+      <span class="dot" style="background:var(--cat-competition)"></span> Competitions
+      <span class="count" id="count-cat-competition">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="fellowship">
+      <span class="dot" style="background:var(--cat-fellowship)"></span> Fellowships
+      <span class="count" id="count-cat-fellowship">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="grant">
+      <span class="dot" style="background:var(--cat-grant)"></span> Grants
+      <span class="count" id="count-cat-grant">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="work-abroad">
+      <span class="dot" style="background:var(--cat-abroad)"></span> Work Abroad
+      <span class="count" id="count-cat-work-abroad">0</span>
+    </button>
+    <button class="filter-btn" data-filter="category" data-value="angel-investing">
+      <span class="dot" style="background:var(--cat-angel)"></span> Angel Investing
+      <span class="count" id="count-cat-angel-investing">0</span>
+    </button>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>Opportunity Radar</h1>
+        <p>Grants · Fellowships · Competitions · AI Programs for entrepreneurs &amp; AI practitioners</p>
+      </div>
+
+      <button class="run-btn" id="run-btn" onclick="runAgent()">
+        <span class="run-icon">⚡ Run Agent</span>
+        <div class="spinner"></div>
+        <span class="run-label" style="display:none">Searching...</span>
+      </button>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="value" id="stat-total">–</div>
+        <div class="label">Total tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-open">–</div>
+        <div class="label">Open now</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-new">–</div>
+        <div class="label">New this week</div>
+      </div>
+    </div>
+
+    <div class="last-updated" id="last-updated"></div>
+
+    <div class="controls">
+      <input type="text" class="search-box" id="search-input" placeholder="Search by title, org, tag…" />
+      <select class="select-box" id="sort-select">
+        <option value="newest">Newest first</option>
+        <option value="deadline">By deadline</option>
+      </select>
+    </div>
+
+    <!-- Progress log -->
+    <div class="progress-panel" id="progress-panel">
+      <div id="progress-log"></div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards-grid" id="cards-grid">
+      <div class="empty-state">
+        <div class="empty-icon">🔭</div>
+        <h2>No opportunities yet</h2>
+        <p>Click <strong>Run Agent</strong> to have Claude search the web for grants, fellowships, and opportunities across entrepreneurship, AI for good, competitions, and more.</p>
+        <button class="run-btn" style="margin: 0 auto" onclick="runAgent()">
+          <span class="run-icon">⚡ Run Agent Now</span>
+          <div class="spinner"></div>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  let allOpps = [];
+  let filters = { status: 'all', category: 'all', search: '', sort: 'newest' };
+
+  const CAT_COLORS = {
+    'entrepreneurship': 'var(--cat-entrepreneur)',
+    'angel-investing':  'var(--cat-angel)',
+    'ai-for-good':      'var(--cat-ai-good)',
+    'work-abroad':      'var(--cat-abroad)',
+    'competition':      'var(--cat-competition)',
+    'ai-program':       'var(--cat-ai-program)',
+    'grant':            'var(--cat-grant)',
+    'fellowship':       'var(--cat-fellowship)',
+  };
+
+  const CAT_LABELS = {
+    'entrepreneurship': 'Entrepreneur',
+    'angel-investing':  'Angel',
+    'ai-for-good':      'AI for Good',
+    'work-abroad':      'Work Abroad',
+    'competition':      'Competition',
+    'ai-program':       'AI Program',
+    'grant':            'Grant',
+    'fellowship':       'Fellowship',
+  };
+
+  // ── Load data ─────────────────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const params = new URLSearchParams({ sort: filters.sort });
+      const res = await fetch(`/api/opportunities?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      allOpps = data.opportunities || [];
+      updateStats(data.stats);
+      renderCards();
+      updateSidebarCounts();
+    } catch (e) {
+      console.error('Load failed:', e);
+    }
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  function updateStats(stats) {
+    if (!stats) return;
+    document.getElementById('stat-total').textContent = stats.total ?? 0;
+    document.getElementById('stat-open').textContent = stats.open ?? 0;
+    document.getElementById('stat-new').textContent = stats.newThisWeek ?? 0;
+
+    const lu = document.getElementById('last-updated');
+    if (stats.lastUpdated) {
+      const d = new Date(stats.lastUpdated);
+      lu.textContent = `Last updated: ${d.toLocaleDateString()} at ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    }
+  }
+
+  // ── Sidebar counts ────────────────────────────────────────────────────────
+  function updateSidebarCounts() {
+    const total = allOpps.length;
+    const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+
+    set('count-all',      total);
+    set('count-open',     allOpps.filter(o => o.status === 'open').length);
+    set('count-rolling',  allOpps.filter(o => o.status === 'rolling').length);
+    set('count-upcoming', allOpps.filter(o => o.status === 'upcoming').length);
+
+    const cats = ['entrepreneurship','angel-investing','ai-for-good','work-abroad','competition','ai-program','grant','fellowship'];
+    for (const cat of cats) {
+      set(`count-cat-${cat}`, allOpps.filter(o => o.category === cat).length);
+    }
+  }
+
+  // ── Render cards ──────────────────────────────────────────────────────────
+  function renderCards() {
+    let opps = [...allOpps];
+
+    if (filters.status !== 'all') {
+      opps = opps.filter(o => o.status === filters.status);
+    }
+    if (filters.category !== 'all') {
+      opps = opps.filter(o => o.category === filters.category);
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      opps = opps.filter(o =>
+        o.title?.toLowerCase().includes(q) ||
+        o.organization?.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q) ||
+        o.tags?.some(t => t.toLowerCase().includes(q))
+      );
+    }
+
+    if (filters.sort === 'deadline') {
+      opps.sort((a, b) => {
+        const da = (a.deadline || '').match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(a.deadline) : new Date('2099-01-01');
+        const db = (b.deadline || '').match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(b.deadline) : new Date('2099-01-01');
+        return da - db;
+      });
+    }
+
+    const grid = document.getElementById('cards-grid');
+
+    if (opps.length === 0) {
+      if (allOpps.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔭</div>
+            <h2>No opportunities yet</h2>
+            <p>Click <strong>Run Agent</strong> to have Claude search the web for grants, fellowships, and opportunities across entrepreneurship, AI for good, competitions, and more.</p>
+            <button class="run-btn" style="margin:0 auto" onclick="runAgent()">
+              <span class="run-icon">⚡ Run Agent Now</span>
+              <div class="spinner"></div>
+            </button>
+          </div>`;
+      } else {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h2>No matches</h2>
+            <p>Try adjusting your filters or search terms.</p>
+          </div>`;
+      }
+      return;
+    }
+
+    grid.innerHTML = opps.map(o => cardHtml(o)).join('');
+  }
+
+  function cardHtml(o) {
+    const catColor = CAT_COLORS[o.category] || 'var(--muted)';
+    const catLabel = CAT_LABELS[o.category] || o.category;
+    const statusClass = o.status || 'unknown';
+
+    const deadlineChip = deadlineHtml(o.deadline);
+    const amountChip = o.amount && o.amount !== 'unknown'
+      ? `<span class="meta-chip amount">💰 ${o.amount}</span>` : '';
+
+    const tags = (o.tags || []).slice(0, 5).map(t =>
+      `<span class="tag">${escHtml(t)}</span>`
+    ).join('');
+
+    const href = safeUrl(o.url);
+
+    return `
+      <div class="opp-card ${statusClass === 'closed' ? 'closed' : ''}">
+        <div class="card-top">
+          <span class="cat-badge" style="background:${catColor}22;color:${catColor}">${catLabel}</span>
+          <span class="status-dot ${statusClass}" title="Status: ${statusClass}"></span>
+        </div>
+        <div>
+          <div class="card-title">${escHtml(o.title)}</div>
+          <div class="card-org">${escHtml(o.organization || '')}</div>
+        </div>
+        <div class="card-desc">${escHtml(o.description || '')}</div>
+        <div class="card-meta">
+          ${amountChip}
+          ${deadlineChip}
+          <span class="meta-chip">${escHtml(o.eligibility || 'See listing')}</span>
+        </div>
+        ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+        ${href ? `<a href="${escAttr(href)}" target="_blank" rel="noopener noreferrer" class="apply-btn">
+          Apply / Learn more →
+        </a>` : ''}
+      </div>`;
+  }
+
+  // Only ever render http(s) links — anything else (javascript:, data:) is dropped.
+  function safeUrl(raw) {
+    try {
+      const u = new URL(raw);
+      return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function deadlineHtml(deadline) {
+    if (!deadline || deadline === 'Unknown') {
+      return `<span class="meta-chip">📅 Deadline TBD</span>`;
+    }
+    if (!deadline.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return `<span class="meta-chip">📅 ${escHtml(deadline)}</span>`;
+    }
+    const d = new Date(deadline);
+    const now = new Date();
+    const days = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+
+    if (days < 0) return `<span class="meta-chip">📅 Closed</span>`;
+    if (days <= 14) return `<span class="meta-chip deadline-urgent">🔥 ${days}d left</span>`;
+    if (days <= 45) return `<span class="meta-chip deadline-soon">⏰ ${days}d left</span>`;
+    return `<span class="meta-chip deadline-ok">📅 ${d.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'})}</span>`;
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escAttr(s) {
+    return String(s || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── Sidebar filter buttons ─────────────────────────────────────────────────
+  document.getElementById('sidebar').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn[data-filter]');
+    if (!btn) return;
+
+    const filterType = btn.dataset.filter;
+    const value = btn.dataset.value;
+
+    document.querySelectorAll(`[data-filter="${filterType}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    filters[filterType] = value;
+    renderCards();
+  });
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  let searchTimer;
+  document.getElementById('search-input').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      filters.search = e.target.value.trim();
+      renderCards();
+    }, 200);
+  });
+
+  document.getElementById('sort-select').addEventListener('change', e => {
+    filters.sort = e.target.value;
+    loadData();
+  });
+
+  // ── Run agent ─────────────────────────────────────────────────────────────
+  async function runAgent() {
+    const btn = document.getElementById('run-btn');
+    const label = btn.querySelector('.run-label');
+    const panel = document.getElementById('progress-panel');
+    const log = document.getElementById('progress-log');
+
+    btn.disabled = true;
+    btn.classList.add('running');
+    label.style.display = 'inline';
+    panel.classList.add('visible');
+    log.innerHTML = '';
+
+    function addLog(text, cls = '') {
+      const p = document.createElement('p');
+      p.textContent = text;
+      if (cls) p.className = cls;
+      log.appendChild(p);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    addLog('Starting agent search...');
+
+    try {
+      const res = await fetch('/api/agent/run', { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        addLog(`Error: ${err.error || res.statusText}`, 'error');
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === 'progress') {
+              addLog(event.message);
+            } else if (event.type === 'opportunity') {
+              addLog(`✓ Saved: ${event.opportunity?.title}`, 'highlight');
+              // Inject into grid immediately
+              if (event.opportunity) {
+                allOpps.unshift(event.opportunity);
+                updateSidebarCounts();
+                renderCards();
+              }
+            } else if (event.type === 'error') {
+              addLog(`Error: ${event.message}`, 'error');
+            } else if (event.type === 'complete' || event.type === 'done') {
+              const s = event.stats;
+              if (s) {
+                const tokens = s.inputTokens || s.outputTokens
+                  ? ` (${Math.round(((s.inputTokens || 0) + (s.outputTokens || 0)) / 1000)}k tokens)`
+                  : '';
+                addLog(`Done! ${s.searches} searches, ${s.saved} new saved, ${s.skipped} duplicates skipped${tokens}.`, 'highlight');
+              }
+              await loadData();
+            }
+          } catch {}
+        }
+      }
+    } catch (err) {
+      addLog(`Connection error: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('running');
+      label.style.display = 'none';
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadData();
+</script>
+</body>
+</html>
