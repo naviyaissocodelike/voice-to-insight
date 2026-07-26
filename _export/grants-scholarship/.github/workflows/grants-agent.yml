@@ -2,9 +2,11 @@ name: Grants Agent
 
 on:
   schedule:
-    # Daily at 13:00 UTC (~8am ET). Note: scheduled workflows only run on the
-    # default branch, and GitHub may delay cron jobs by a few minutes.
-    - cron: "0 13 * * *"
+    # Every two weeks: cron can't express exact 14-day intervals, so this runs
+    # on the 1st and 15th of each month at 13:00 UTC (~8am ET) — twice monthly.
+    # Note: scheduled workflows only run on the default branch, and GitHub may
+    # delay cron jobs by a few minutes.
+    - cron: "0 13 1,15 * *"
   workflow_dispatch: {}
 
 # Never let two runs overlap — they'd race on the data files.
