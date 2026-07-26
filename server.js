@@ -107,6 +107,20 @@ app.get("/api/opportunities/stats", (req, res) => {
 
 let agentRunning = false;
 
+async function runAgentOnce({ send, shouldStop } = {}) {
+  agentRunning = true;
+  try {
+    return await runGrantsAgent({
+      onProgress: msg => send?.("progress", { message: msg }),
+      onOpportunity: opp => send?.("opportunity", { opportunity: opp }),
+      onComplete: s => send?.("complete", { stats: s }),
+      shouldStop
+    });
+  } finally {
+    agentRunning = false;
+  }
+}
+
 app.post("/api/agent/run", async (req, res) => {
   if (agentRunning) {
     return res.status(409).json({ error: "Agent is already running" });
@@ -116,22 +130,23 @@ app.post("/api/agent/run", async (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  const send = (type, data) => res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`);
+  // Stop the agent loop (at the next iteration boundary) if the client goes away,
+  // so a closed browser tab doesn't keep burning API tokens.
+  let clientGone = false;
+  req.on("close", () => { clientGone = true; });
 
-  agentRunning = true;
+  const send = (type, data) => {
+    if (!clientGone) res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`);
+  };
+
   send("start", { message: "Agent starting..." });
 
   try {
-    const stats = await runGrantsAgent({
-      onProgress: msg => send("progress", { message: msg }),
-      onOpportunity: opp => send("opportunity", { opportunity: opp }),
-      onComplete: s => send("complete", { stats: s })
-    });
+    const stats = await runAgentOnce({ send, shouldStop: () => clientGone });
     send("done", { stats });
   } catch (err) {
     send("error", { message: err.message });
   } finally {
-    agentRunning = false;
     res.end();
   }
 });
@@ -139,6 +154,25 @@ app.post("/api/agent/run", async (req, res) => {
 app.get("/api/agent/status", (req, res) => {
   res.json({ running: agentRunning });
 });
+
+// ── Optional scheduled runs ─────────────────────────────────────────────────
+// Set AGENT_AUTO_RUN_HOURS in .env (e.g. 24) to re-run the agent automatically.
+
+const autoRunHours = Number(process.env.AGENT_AUTO_RUN_HOURS);
+if (autoRunHours > 0) {
+  const intervalMs = autoRunHours * 60 * 60 * 1000;
+  setInterval(async () => {
+    if (agentRunning) return;
+    console.log(`[auto-run] Starting scheduled agent run (every ${autoRunHours}h)`);
+    try {
+      const stats = await runAgentOnce();
+      console.log(`[auto-run] Done: ${stats.saved} new, ${stats.total} total tracked`);
+    } catch (err) {
+      console.error(`[auto-run] Failed: ${err.message}`);
+    }
+  }, intervalMs);
+  console.log(`Scheduled agent runs enabled: every ${autoRunHours}h`);
+}
 
 // ── Start ───────────────────────────────────────────────────────────────────
 

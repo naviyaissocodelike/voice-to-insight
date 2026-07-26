@@ -31,12 +31,14 @@ try {
       console.log(`  Duplicates:       ${stats.skipped}`);
       console.log(`  Errors:           ${stats.errors}`);
       console.log(`  Total in DB:      ${stats.total}`);
+      console.log(`  Tokens:           ${stats.inputTokens} in / ${stats.outputTokens} out`);
       console.log(`  Time:             ${elapsed}s`);
       console.log('━'.repeat(40) + '\n');
     }
   });
 
-  process.exit(result.errors > 0 ? 1 : 0);
+  // Individual search errors are recoverable; the run itself completed.
+  process.exit(0);
 } catch (err) {
   console.error('\n Error:', err.message);
   if (err.message.includes('ANTHROPIC_API_KEY')) {

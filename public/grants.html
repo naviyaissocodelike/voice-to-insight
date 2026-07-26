@@ -297,6 +297,9 @@
     .status-dot.upcoming { background: var(--warn); }
     .status-dot.rolling  { background: #7dd3fc; }
     .status-dot.unknown  { background: var(--border); }
+    .status-dot.closed   { background: var(--danger); opacity: 0.6; }
+
+    .opp-card.closed { opacity: 0.55; }
 
     .card-title {
       font-size: 0.95rem;
@@ -676,8 +679,10 @@
       `<span class="tag">${escHtml(t)}</span>`
     ).join('');
 
+    const href = safeUrl(o.url);
+
     return `
-      <div class="opp-card">
+      <div class="opp-card ${statusClass === 'closed' ? 'closed' : ''}">
         <div class="card-top">
           <span class="cat-badge" style="background:${catColor}22;color:${catColor}">${catLabel}</span>
           <span class="status-dot ${statusClass}" title="Status: ${statusClass}"></span>
@@ -693,10 +698,20 @@
           <span class="meta-chip">${escHtml(o.eligibility || 'See listing')}</span>
         </div>
         ${tags ? `<div class="card-tags">${tags}</div>` : ''}
-        <a href="${escAttr(o.url)}" target="_blank" rel="noopener noreferrer" class="apply-btn">
+        ${href ? `<a href="${escAttr(href)}" target="_blank" rel="noopener noreferrer" class="apply-btn">
           Apply / Learn more →
-        </a>
+        </a>` : ''}
       </div>`;
+  }
+
+  // Only ever render http(s) links — anything else (javascript:, data:) is dropped.
+  function safeUrl(raw) {
+    try {
+      const u = new URL(raw);
+      return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : null;
+    } catch {
+      return null;
+    }
   }
 
   function deadlineHtml(deadline) {
@@ -815,7 +830,12 @@
               addLog(`Error: ${event.message}`, 'error');
             } else if (event.type === 'complete' || event.type === 'done') {
               const s = event.stats;
-              addLog(`Done! Searched ${s?.searches || '?'} queries, saved ${s?.saved || '?'} new opportunities.`, 'highlight');
+              if (s) {
+                const tokens = s.inputTokens || s.outputTokens
+                  ? ` (${Math.round(((s.inputTokens || 0) + (s.outputTokens || 0)) / 1000)}k tokens)`
+                  : '';
+                addLog(`Done! ${s.searches} searches, ${s.saved} new saved, ${s.skipped} duplicates skipped${tokens}.`, 'highlight');
+              }
               await loadData();
             }
           } catch {}
